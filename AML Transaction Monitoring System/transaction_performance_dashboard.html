@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AML Transaction Monitoring System</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0f4f8;--card:#fff;--border:#e2e8f0;--radius:16px;
+  --shadow:0 2px 12px rgba(0,0,0,.07),0 1px 3px rgba(0,0,0,.05);
+  --shadow-h:0 8px 32px rgba(0,0,0,.12),0 2px 8px rgba(0,0,0,.07);
+  --blue:#2563eb;--blue-t:#eff6ff;
+  --teal:#0891b2;--teal-t:#ecfeff;
+  --green:#059669;--green-t:#ecfdf5;
+  --amber:#d97706;--amber-t:#fffbeb;
+  --violet:#7c3aed;--violet-t:#f5f3ff;
+  --rose:#e11d48;--rose-t:#fff1f2;
+  --text:#0f172a;--muted:#64748b;--light:#94a3b8;
+  --font:'Poppins',sans-serif;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh}
+
+/* HEADER */
+.header{text-align:center;padding:52px 24px 0}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;background:var(--blue-t);border:1px solid #bfdbfe;border-radius:999px;padding:6px 16px;font-size:11px;font-weight:700;color:var(--blue);letter-spacing:.08em;text-transform:uppercase;margin-bottom:18px}
+.eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--blue);display:inline-block}
+.header h1{font-size:clamp(26px,5vw,44px);font-weight:800;line-height:1.1;letter-spacing:-.02em}
+.header h1 .accent{background:linear-gradient(90deg,var(--blue),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header .sub{margin:10px auto 0;font-size:14.5px;color:var(--muted);max-width:520px;line-height:1.6}
+.divider{width:60px;height:4px;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--teal));margin:22px auto 0}
+
+.wrap{max-width:1320px;margin:0 auto;padding:0 24px 60px}
+
+/* UPLOAD */
+#upload-sec{margin-top:44px;display:flex;justify-content:center}
+.upload-card{background:var(--card);border:2px dashed var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:56px 48px;text-align:center;max-width:520px;width:100%;transition:border-color .25s,box-shadow .25s,transform .25s;cursor:pointer}
+.upload-card:hover,.upload-card.drag{border-color:var(--blue);box-shadow:0 0 0 4px #bfdbfe,var(--shadow-h);transform:translateY(-2px)}
+.up-icon{width:64px;height:64px;margin:0 auto 20px;background:var(--blue-t);border-radius:16px;display:flex;align-items:center;justify-content:center}
+.up-icon svg{width:32px;height:32px;stroke:var(--blue);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.upload-card h2{font-size:20px;font-weight:700;margin-bottom:8px}
+.upload-card p{font-size:13.5px;color:var(--muted);margin-bottom:24px;line-height:1.6}
+.btn-up{display:inline-flex;align-items:center;gap:8px;background:var(--blue);color:#fff;border:none;border-radius:10px;padding:11px 24px;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:background .2s,transform .15s,box-shadow .2s;box-shadow:0 2px 8px rgba(37,99,235,.35)}
+.btn-up:hover{background:#1d4ed8;transform:translateY(-1px);box-shadow:0 4px 16px rgba(37,99,235,.4)}
+#file-in{display:none}
+
+/* DASHBOARD */
+#dash-sec{display:none}
+
+/* STATUS BAR */
+.status-bar{display:flex;align-items:center;justify-content:space-between;margin-top:32px;margin-bottom:18px;flex-wrap:wrap;gap:12px}
+.rec-pill{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:999px;padding:7px 16px;font-size:13px;font-weight:600;box-shadow:var(--shadow)}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+.btn-reset{display:inline-flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px 18px;font-family:var(--font);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .2s;box-shadow:var(--shadow)}
+.btn-reset:hover{color:var(--rose);border-color:var(--rose)}
+
+/* EXPORT BAR */
+.export-bar{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 20px;margin-bottom:24px;flex-wrap:wrap}
+.exp-label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-right:4px;white-space:nowrap}
+.exp-sep{width:1px;height:24px;background:var(--border);margin:0 4px}
+.btn-exp{display:inline-flex;align-items:center;gap:7px;border-radius:9px;padding:8px 16px;font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;border:1.5px solid transparent;transition:all .2s;white-space:nowrap}
+.ep{background:var(--blue);color:#fff;box-shadow:0 2px 8px rgba(37,99,235,.3)}.ep:hover{background:#1d4ed8;transform:translateY(-1px)}
+.et{background:var(--teal-t);color:var(--teal);border-color:#a5f3fc}.et:hover{background:#cffafe;border-color:var(--teal)}
+.eg{background:var(--green-t);color:var(--green);border-color:#a7f3d0}.eg:hover{background:#d1fae5;border-color:var(--green)}
+.ev{background:var(--violet-t);color:var(--violet);border-color:#ddd6fe}.ev:hover{background:#ede9fe;border-color:var(--violet)}
+.ea{background:var(--amber-t);color:var(--amber);border-color:#fde68a}.ea:hover{background:#fef3c7;border-color:var(--amber)}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px;margin-bottom:28px}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 20px 18px;transition:box-shadow .25s,transform .25s;opacity:0;transform:translateY(24px)}
+.kpi-card:hover{box-shadow:var(--shadow-h);transform:translateY(-3px)}
+.kpi-card.vis{animation:fadeUp .45s ease forwards}
+.kpi-ico{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;font-size:18px}
+.kpi-lbl{font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.kpi-val{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.kpi-sub{font-size:11.5px;color:var(--light);margin-top:5px;font-weight:500}
+.kpi-badge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-top:6px}
+
+/* SECTION TITLE */
+.sec-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px;margin-top:8px;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* CHARTS */
+.row{display:grid;gap:16px;margin-bottom:20px}
+.c2{grid-template-columns:repeat(2,1fr)}
+.c3{grid-template-columns:repeat(3,1fr)}
+.c21{grid-template-columns:2fr 1fr}
+@media(max-width:900px){.c2,.c3,.c21{grid-template-columns:1fr}}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;opacity:0;transform:translateY(24px);transition:box-shadow .25s,transform .25s}
+.chart-card:hover{box-shadow:var(--shadow-h);transform:translateY(-2px)}
+.chart-card.vis{animation:fadeUp .5s ease forwards}
+.cc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:2px}
+.cc-left{flex:1}
+.ct{font-size:13.5px;font-weight:700;margin-bottom:3px;color:var(--text)}
+.cd{font-size:11.5px;color:var(--muted);margin-bottom:12px}
+.btn-cdl{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-family:var(--font);font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .18s;margin-top:1px}
+.btn-cdl:hover{background:var(--blue-t);color:var(--blue);border-color:#bfdbfe}
+
+/* FEED TABLE */
+.feed-scroll{max-height:360px;overflow-y:auto}
+.feed-scroll::-webkit-scrollbar{width:4px}
+.feed-scroll::-webkit-scrollbar-track{background:var(--bg);border-radius:99px}
+.feed-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+.feed-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.feed-table th{text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.feed-table td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.feed-table tr:last-child td{border-bottom:none}
+.feed-table tr:hover td{background:var(--bg)}
+.rpill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:700;white-space:nowrap}
+.rh{background:var(--rose-t);color:var(--rose)}
+.rm{background:var(--amber-t);color:var(--amber)}
+.rl{background:var(--green-t);color:var(--green)}
+.sbar{display:flex;align-items:center;gap:8px}
+.strack{flex:1;height:5px;background:var(--border);border-radius:99px;overflow:hidden}
+.sfill{height:100%;border-radius:99px}
+.mono{font-family:'Courier New',monospace;font-size:11.5px}
+
+/* TOAST */
+#toast{position:fixed;bottom:28px;right:28px;background:var(--text);color:#fff;border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.22);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);z-index:9999;pointer-events:none}
+#toast.show{transform:translateY(0);opacity:1}
+.t-spin{width:16px;height:16px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+/* PRINT */
+@media print{
+  body{background:#fff!important}
+  .header{padding-top:20px!important}
+  .export-bar,.btn-reset,#upload-sec,#toast{display:none!important}
+  .kpi-card,.chart-card{break-inside:avoid;box-shadow:none!important;border:1px solid #e2e8f0!important}
+  @page{margin:16mm;size:A4 landscape}
+}
+</style>
+</head>
+<body>
+
+<div id="toast"><div class="t-spin" id="t-spin"></div><span id="t-msg">Working…</span></div>
+
+<header class="header">
+  <div class="eyebrow"><span class="dot"></span>AML Intelligence Platform</div>
+  <h1>Transaction Monitoring <span class="accent">Performance</span> Dashboard</h1>
+  <p class="sub">Upload your transaction dataset to unlock real-time AML insights, risk scoring, and behavioral anomaly detection.</p>
+  <div class="divider"></div>
+</header>
+
+<div class="wrap">
+
+  <!-- UPLOAD SCREEN -->
+  <div id="upload-sec">
+    <div class="upload-card" id="drop-zone">
+      <div class="up-icon">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <h2>Upload Transaction Dataset</h2>
+      <p>Drop your JSON file here or click below.<br>Expected: JSON array with AML transaction fields.</p>
+      <button class="btn-up" onclick="document.getElementById('file-in').click()">
+        Choose JSON File
+      </button>
+      <input type="file" id="file-in" accept=".json"/>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dash-sec">
+
+    <div class="status-bar">
+      <div class="rec-pill"><span class="live-dot"></span><span id="rec-count">0 records</span></div>
+      <button class="btn-reset" onclick="doReset()">↺ Reset / New Upload</button>
+    </div>
+
+    <!-- EXPORT BAR -->
+    <div class="export-bar">
+      <span class="exp-label">📥 Export</span>
+      <div class="exp-sep"></div>
+      <button class="btn-exp ep" onclick="exportPDF()">📄 Full Report PDF</button>
+      <button class="btn-exp et" onclick="exportAllPNG()">🖼 All Charts PNG</button>
+      <button class="btn-exp eg" onclick="exportKPIcsv()">📊 KPIs CSV</button>
+      <button class="btn-exp ev" onclick="exportFeedCSV()">🚨 Alert Feed CSV</button>
+      <button class="btn-exp ea" onclick="exportRawCSV()">🗄 Raw Data CSV</button>
+    </div>
+
+    <p class="sec-title">Key Performance Indicators</p>
+    <div class="kpi-grid" id="kpi-grid"></div>
+
+    <p class="sec-title">Transaction Analytics</p>
+    <div class="row c21">
+      <div class="chart-card" id="cc-trend">
+        <div class="cc-head"><div class="cc-left"><div class="ct">Transaction Volume Over Time</div><div class="cd">Monthly volume with suspicious overlay</div></div><button class="btn-cdl" onclick="dlChart('chart-trend','aml_trend')">⬇ PNG</button></div>
+        <div id="chart-trend" style="height:240px"></div>
+      </div>
+      <div class="chart-card" id="cc-channel">
+        <div class="cc-head"><div class="cc-left"><div class="ct">Channel Distribution</div><div class="cd">Transactions by banking channel</div></div><button class="btn-cdl" onclick="dlChart('chart-channel','aml_channel')">⬇ PNG</button></div>
+        <div id="chart-channel" style="height:240px"></div>
+      </div>
+    </div>
+
+    <div class="row c2">
+      <div class="chart-card" id="cc-location">
+        <div class="cc-head"><div class="cc-left"><div class="ct">Top 10 Locations — Suspicious Activity</div><div class="cd">Cities ranked by flagged transaction count</div></div><button class="btn-cdl" onclick="dlChart('chart-location','aml_location')">⬇ PNG</button></div>
+        <div id="chart-location" style="height:240px"></div>
+      </div>
+      <div class="chart-card" id="cc-occupation">
+        <div class="cc-head"><div class="cc-left"><div class="ct">Occupation Risk Analysis</div><div class="cd">Suspicious vs normal by occupation</div></div><button class="btn-cdl" onclick="dlChart('chart-occupation','aml_occupation')">⬇ PNG</button></div>
+        <div id="chart-occupation" style="height:240px"></div>
+      </div>
+    </div>
+
+    <div class="row c3">
+      <div class="chart-card" id="cc-risk">
+        <div class="cc-head"><div class="cc-left"><div class="ct">Risk Score Distribution</div><div class="cd">Low / Medium / High risk counts</div></div><button class="btn-cdl" onclick="dlChart('chart-risk','aml_risk')">⬇ PNG</button></div>
+        <div id="chart-risk" style="height:220px"></div>
+      </div>
+      <div class="chart-card" id="cc-login">
+        <div class="cc-head"><div class="cc-left"><div class="ct">Login Attempt Frequency</div><div class="cd">Distribution of login attempts</div></div><button class="btn-cdl" onclick="dlChart('chart-login','aml_login')">⬇ PNG</button></div>
+        <div id="chart-login" style="height:220px"></div>
+      </div>
+      <div class="chart-card" id="cc-type">
+        <div class="cc-head"><div class="cc-left"><div class="ct">Transaction Type Split</div><div class="cd">Debit vs Credit vs Transfer</div></div><button class="btn-cdl" onclick="dlChart('chart-type','aml_txntype')">⬇ PNG</button></div>
+        <div id="chart-type" style="height:220px"></div>
+      </div>
+    </div>
+
+    <div class="row c3">
+      <div class="chart-card" id="cc-amount">
+        <div class="cc-head"><div class="cc-left"><div class="ct">Amount Bucket Breakdown</div><div class="cd">Transaction size classification</div></div><button class="btn-cdl" onclick="dlChart('chart-amount','aml_amount')">⬇ PNG</button></div>
+        <div id="chart-amount" style="height:220px"></div>
+      </div>
+      <div class="chart-card" id="cc-duration">
+        <div class="cc-head"><div class="cc-left"><div class="ct">Transaction Duration Spread</div><div class="cd">Session length histogram</div></div><button class="btn-cdl" onclick="dlChart('chart-duration','aml_duration')">⬇ PNG</button></div>
+        <div id="chart-duration" style="height:220px"></div>
+      </div>
+      <div class="chart-card" id="cc-age">
+        <div class="cc-head"><div class="cc-left"><div class="ct">Customer Age vs. Risk</div><div class="cd">Suspicion rate by age group</div></div><button class="btn-cdl" onclick="dlChart('chart-age','aml_age')">⬇ PNG</button></div>
+        <div id="chart-age" style="height:220px"></div>
+      </div>
+    </div>
+
+    <p class="sec-title">Suspicious Activity Feed</p>
+    <div class="chart-card" style="padding-bottom:8px;opacity:1;transform:none">
+      <div class="cc-head">
+        <div class="cc-left"><div class="ct">Top 25 Highest-Risk Transactions</div><div class="cd">Sorted by composite AML risk score — 🔴 High ≥61 · 🟡 Medium 31–60 · 🟢 Low ≤30</div></div>
+        <button class="btn-cdl" onclick="exportFeedCSV()">⬇ CSV</button>
+      </div>
+      <div class="feed-scroll">
+        <table class="feed-table">
+          <thead><tr><th>Txn ID</th><th>Account</th><th>Amount ($)</th><th>Channel</th><th>Location</th><th>Login Att.</th><th>Duration</th><th>Risk Score</th><th>Level</th></tr></thead>
+          <tbody id="feed-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+var gData = [];
+
+/* ── UPLOAD ─────────────────────────────── */
+var dz = document.getElementById('drop-zone');
+var fi = document.getElementById('file-in');
+
+dz.addEventListener('dragover', function(e){ e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', function(){ dz.classList.remove('drag'); });
+dz.addEventListener('drop', function(e){
+  e.preventDefault(); dz.classList.remove('drag');
+  var f = e.dataTransfer.files[0];
+  if (f) readFile(f);
+});
+fi.addEventListener('change', function(e){
+  if (e.target.files[0]) readFile(e.target.files[0]);
+});
+
+function readFile(file) {
+  var r = new FileReader();
+  r.onload = function(ev) {
+    try {
+      var d = JSON.parse(ev.target.result);
+      if (!Array.isArray(d) || !d[0] || !d[0].TransactionID) throw new Error('bad format');
+      buildDashboard(d);
+    } catch(err) {
+      alert('Invalid JSON. Please upload a valid AML transaction JSON array.');
+    }
+  };
+  r.readAsText(file);
+}
+
+function doReset() {
+  document.getElementById('dash-sec').style.display = 'none';
+  document.getElementById('upload-sec').style.display = 'flex';
+  fi.value = '';
+  gData = [];
+  ['chart-trend','chart-channel','chart-location','chart-occupation',
+   'chart-risk','chart-login','chart-type','chart-amount','chart-duration','chart-age']
+  .forEach(function(id){ var el=document.getElementById(id); if(el) Plotly.purge(el); });
+}
+
+/* ── RISK ENGINE ────────────────────────── */
+function calcScore(tx) {
+  var s = 0;
+  if (tx.TransactionAmount > 1000)             s += 40;
+  else if (tx.TransactionAmount > 500)         s += 20;
+  if (tx.LoginAttempts >= 3)                   s += 30;
+  else if (tx.LoginAttempts === 2)             s += 15;
+  if (tx.Channel === 'Online')                 s += 10;
+  if (tx.TransactionDuration < 20)             s += 20;
+  if (tx.AccountBalance < tx.TransactionAmount) s += 30;
+  return Math.min(s, 100);
+}
+function riskLabel(s) { return s >= 61 ? 'High' : s >= 31 ? 'Medium' : 'Low'; }
+
+/* ── PLOTLY DEFAULTS ────────────────────── */
+var PF  = { family: 'Poppins,sans-serif', size: 11, color: '#64748b' };
+var GC  = '#e2e8f0';
+var TR  = 'rgba(0,0,0,0)';
+var CFG = { displayModeBar: false, responsive: true };
+
+function baseL(ex) {
+  return Object.assign({
+    paper_bgcolor: TR, plot_bgcolor: TR, font: PF,
+    margin: { t:10, b:40, l:44, r:12 },
+    xaxis: { gridcolor:GC, linecolor:GC, tickfont:PF, zeroline:false },
+    yaxis: { gridcolor:GC, linecolor:GC, tickfont:PF, zeroline:false },
+    showlegend: false, hovermode: 'closest'
+  }, ex || {});
+}
+
+/* ── BUILD DASHBOARD ────────────────────── */
+function buildDashboard(data) {
+  data.forEach(function(tx) {
+    tx._score = calcScore(tx);
+    tx._risk  = riskLabel(tx._score);
+    tx._susp  = tx._score >= 31;
+    var d = new Date(tx.TransactionDate);
+    tx._date  = isNaN(d.getTime()) ? null : d;
+  });
+  gData = data;
+
+  document.getElementById('upload-sec').style.display = 'none';
+  document.getElementById('dash-sec').style.display   = 'block';
+  document.getElementById('rec-count').textContent    = data.length.toLocaleString() + ' records loaded';
+
+  buildKPIs(data);
+  setTimeout(function() {
+    buildTrend(data);
+    buildChannel(data);
+    buildLocation(data);
+    buildOccupation(data);
+    buildRisk(data);
+    buildLogin(data);
+    buildType(data);
+    buildAmount(data);
+    buildDuration(data);
+    buildAge(data);
+    buildFeed(data);
+    animateCards();
+  }, 80);
+}
+
+/* ── KPI CARDS ──────────────────────────── */
+function buildKPIs(data) {
+  var total  = data.length;
+  var vol    = data.reduce(function(s,tx){ return s + tx.TransactionAmount; }, 0);
+  var susp   = data.filter(function(tx){ return tx._susp; }).length;
+  var high   = data.filter(function(tx){ return tx._risk === 'High'; }).length;
+  var online = data.filter(function(tx){ return tx.Channel === 'Online'; }).length;
+  var loginA = data.filter(function(tx){ return tx.LoginAttempts >= 3; }).length;
+  var avgS   = (data.reduce(function(s,tx){ return s + tx._score; }, 0) / total).toFixed(1);
+  var uAcct  = new Set(data.map(function(tx){ return tx.AccountID; })).size;
+
+  var cards = [
+    { lbl:'Total Transactions', val:total.toLocaleString(),         sub:'All records',                      ico:'📋', col:'blue' },
+    { lbl:'Total Volume',       val:'$'+(vol/1e6).toFixed(2)+'M',   sub:'Sum of all amounts',               ico:'💰', col:'teal' },
+    { lbl:'Suspicious Txns',    val:susp.toLocaleString(),          sub:(susp/total*100).toFixed(1)+'% of total', ico:'⚠️', col:'amber', badge:(susp/total*100).toFixed(1)+'% rate' },
+    { lbl:'High Risk Count',    val:high.toLocaleString(),          sub:'Risk score ≥ 61',                  ico:'🚨', col:'rose',  badge:(high/total*100).toFixed(1)+'% critical' },
+    { lbl:'Online Risk %',      val:(online/total*100).toFixed(1)+'%', sub:'Online channel share',          ico:'🌐', col:'violet' },
+    { lbl:'Login Alerts',       val:loginA.toLocaleString(),        sub:'≥ 3 login attempts',               ico:'🔐', col:'rose' },
+    { lbl:'Avg Risk Score',     val:avgS,                           sub:'Out of 100',                       ico:'📊', col:'violet' },
+    { lbl:'Unique Accounts',    val:uAcct.toLocaleString(),         sub:'Distinct account IDs',             ico:'👤', col:'green' },
+  ];
+
+  var cm = { blue:'var(--blue)', teal:'var(--teal)', green:'var(--green)', amber:'var(--amber)', violet:'var(--violet)', rose:'var(--rose)' };
+  var ct = { blue:'var(--blue-t)', teal:'var(--teal-t)', green:'var(--green-t)', amber:'var(--amber-t)', violet:'var(--violet-t)', rose:'var(--rose-t)' };
+  var grid = document.getElementById('kpi-grid');
+  grid.innerHTML = '';
+
+  cards.forEach(function(c, i) {
+    var badge = c.badge ? '<div class="kpi-badge" style="background:'+ct[c.col]+';color:'+cm[c.col]+'">'+c.badge+'</div>' : '';
+    var el = document.createElement('div');
+    el.className = 'kpi-card';
+    el.style.animationDelay = (i * 0.06) + 's';
+    el.innerHTML =
+      '<div class="kpi-ico" style="background:'+ct[c.col]+'">'+c.ico+'</div>' +
+      '<div class="kpi-lbl">'+c.lbl+'</div>' +
+      '<div class="kpi-val" style="color:'+cm[c.col]+'">'+c.val+'</div>' +
+      '<div class="kpi-sub">'+c.sub+'</div>' + badge;
+    grid.appendChild(el);
+  });
+}
+
+/* ── TREND ──────────────────────────────── */
+function buildTrend(data) {
+  var by = {};
+  data.forEach(function(tx) {
+    if (!tx._date) return;
+    var k = tx._date.toISOString().slice(0, 7);
+    if (!by[k]) by[k] = { t: 0, s: 0 };
+    by[k].t += tx.TransactionAmount;
+    if (tx._susp) by[k].s += tx.TransactionAmount;
+  });
+  var months = Object.keys(by).sort();
+  Plotly.newPlot('chart-trend', [
+    { x:months, y:months.map(function(m){return by[m].t;}), type:'scatter', mode:'lines+markers',
+      fill:'tozeroy', fillcolor:'rgba(37,99,235,0.07)',
+      line:{color:'#2563eb',width:2.5,shape:'spline'}, marker:{color:'#2563eb',size:5},
+      name:'Total', hovertemplate:'%{x}<br>$%{y:,.0f}<extra>Total</extra>' },
+    { x:months, y:months.map(function(m){return by[m].s;}), type:'scatter', mode:'lines+markers',
+      line:{color:'#e11d48',width:2,dash:'dot',shape:'spline'}, marker:{color:'#e11d48',size:5},
+      name:'Suspicious', hovertemplate:'%{x}<br>$%{y:,.0f}<extra>Suspicious</extra>' }
+  ], baseL({ showlegend:true, legend:{x:0,y:1.15,orientation:'h',font:PF},
+    yaxis:{gridcolor:GC,tickformat:'$,.0s',tickfont:PF}, margin:{t:30,b:40,l:56,r:12} }), CFG);
+}
+
+/* ── CHANNEL ────────────────────────────── */
+function buildChannel(data) {
+  var c = {};
+  data.forEach(function(tx){ c[tx.Channel] = (c[tx.Channel]||0) + 1; });
+  var lbl = Object.keys(c);
+  Plotly.newPlot('chart-channel', [{
+    labels:lbl, values:lbl.map(function(l){return c[l];}), type:'pie', hole:.54,
+    marker:{ colors:['#2563eb','#0891b2','#059669','#d97706','#7c3aed'].slice(0,lbl.length), line:{color:'#fff',width:2} },
+    textinfo:'label+percent', textfont:{family:'Poppins',size:11},
+    hovertemplate:'<b>%{label}</b><br>%{value}<extra></extra>'
+  }], baseL({ margin:{t:10,b:10,l:10,r:10}, showlegend:false }), CFG);
+}
+
+/* ── LOCATION ───────────────────────────── */
+function buildLocation(data) {
+  var loc = {};
+  data.filter(function(tx){return tx._susp;}).forEach(function(tx){ loc[tx.Location]=(loc[tx.Location]||0)+1; });
+  var sorted = Object.entries(loc).sort(function(a,b){return b[1]-a[1];}).slice(0,10);
+  var locs = sorted.map(function(e){return e[0];});
+  var cnts = sorted.map(function(e){return e[1];});
+  var mx   = Math.max.apply(null, cnts);
+  var clrs = cnts.map(function(c){ var t=c/mx; return t>.7?'#e11d48':t>.4?'#d97706':'#2563eb'; });
+  Plotly.newPlot('chart-location', [{
+    x:cnts.slice().reverse(), y:locs.slice().reverse(), type:'bar', orientation:'h',
+    marker:{ color:clrs.slice().reverse() },
+    hovertemplate:'<b>%{y}</b><br>%{x} suspicious<extra></extra>'
+  }], baseL({ margin:{t:10,b:36,l:90,r:20}, yaxis:{tickfont:PF,automargin:true} }), CFG);
+}
+
+/* ── OCCUPATION ─────────────────────────── */
+function buildOccupation(data) {
+  var oc = {};
+  data.forEach(function(tx) {
+    if (!oc[tx.CustomerOccupation]) oc[tx.CustomerOccupation] = { t:0, s:0 };
+    oc[tx.CustomerOccupation].t++;
+    if (tx._susp) oc[tx.CustomerOccupation].s++;
+  });
+  var occs = Object.keys(oc).sort(function(a,b){ return oc[b].s - oc[a].s; });
+  Plotly.newPlot('chart-occupation', [
+    { x:occs, y:occs.map(function(o){return oc[o].s;}), type:'bar', name:'Suspicious',
+      marker:{color:'#e11d48',opacity:.9}, hovertemplate:'<b>%{x}</b><br>Suspicious: %{y}<extra></extra>' },
+    { x:occs, y:occs.map(function(o){return oc[o].t-oc[o].s;}), type:'bar', name:'Normal',
+      marker:{color:'#2563eb',opacity:.6}, hovertemplate:'<b>%{x}</b><br>Normal: %{y}<extra></extra>' }
+  ], baseL({ barmode:'stack', showlegend:true, legend:{x:0,y:1.18,orientation:'h',font:PF},
+    margin:{t:30,b:50,l:44,r:12}, xaxis:{tickfont:{family:PF.family,size:10},automargin:true} }), CFG);
+}
+
+/* ── RISK DIST ──────────────────────────── */
+function buildRisk(data) {
+  var lo = data.filter(function(tx){return tx._score<=30;}).length;
+  var me = data.filter(function(tx){return tx._score>30&&tx._score<=60;}).length;
+  var hi = data.filter(function(tx){return tx._score>60;}).length;
+  Plotly.newPlot('chart-risk', [{
+    x:['Low (0–30)','Medium (31–60)','High (61–100)'], y:[lo,me,hi], type:'bar',
+    marker:{color:['#059669','#d97706','#e11d48']},
+    hovertemplate:'<b>%{x}</b><br>%{y} txns<extra></extra>'
+  }], baseL({ margin:{t:10,b:60,l:44,r:12}, xaxis:{tickfont:{family:PF.family,size:9.5},automargin:true} }), CFG);
+}
+
+/* ── LOGIN ──────────────────────────────── */
+function buildLogin(data) {
+  var att = {};
+  data.forEach(function(tx) {
+    var k = tx.LoginAttempts > 5 ? '6+' : String(tx.LoginAttempts);
+    att[k] = (att[k]||0) + 1;
+  });
+  var keys = ['1','2','3','4','5','6+'].filter(function(k){return att[k];});
+  Plotly.newPlot('chart-login', [{
+    x:keys, y:keys.map(function(k){return att[k]||0;}), type:'bar',
+    marker:{ color:keys.map(function(k){return (parseInt(k)>=3||k==='6+')?'#e11d48':'#2563eb';}) },
+    hovertemplate:'<b>%{x} attempts</b><br>%{y} txns<extra></extra>'
+  }], baseL({ margin:{t:10,b:44,l:44,r:12},
+    xaxis:{title:{text:'Login Attempts',font:{family:PF.family,size:10.5}}} }), CFG);
+}
+
+/* ── TX TYPE ────────────────────────────── */
+function buildType(data) {
+  var c = {};
+  data.forEach(function(tx){ c[tx.TransactionType]=(c[tx.TransactionType]||0)+1; });
+  var lbl = Object.keys(c);
+  Plotly.newPlot('chart-type', [{
+    labels:lbl, values:lbl.map(function(l){return c[l];}), type:'pie', hole:.5,
+    marker:{ colors:['#2563eb','#0891b2','#059669','#7c3aed','#d97706'], line:{color:'#fff',width:2} },
+    textinfo:'label+percent', textfont:{family:'Poppins',size:11},
+    hovertemplate:'<b>%{label}</b><br>%{value}<extra></extra>'
+  }], baseL({ margin:{t:10,b:10,l:10,r:10}, showlegend:false }), CFG);
+}
+
+/* ── AMOUNT BUCKETS ─────────────────────── */
+function buildAmount(data) {
+  var b = { 'Micro (<$100)':0, 'Low ($100–500)':0, 'Mid ($500–1k)':0, 'High (>$1k)':0 };
+  data.forEach(function(tx) {
+    if (tx.TransactionAmount < 100)       b['Micro (<$100)']++;
+    else if (tx.TransactionAmount < 500)  b['Low ($100–500)']++;
+    else if (tx.TransactionAmount < 1000) b['Mid ($500–1k)']++;
+    else                                  b['High (>$1k)']++;
+  });
+  var keys = Object.keys(b);
+  Plotly.newPlot('chart-amount', [{
+    x:keys, y:keys.map(function(k){return b[k];}), type:'bar',
+    marker:{ color:['#059669','#0891b2','#d97706','#e11d48'] },
+    hovertemplate:'<b>%{x}</b><br>%{y} txns<extra></extra>'
+  }], baseL({ margin:{t:10,b:70,l:44,r:12}, xaxis:{tickfont:{family:PF.family,size:9.5},automargin:true} }), CFG);
+}
+
+/* ── DURATION ───────────────────────────── */
+function buildDuration(data) {
+  var dur = data.map(function(tx){return tx.TransactionDuration;}).filter(function(d){return d!=null;});
+  Plotly.newPlot('chart-duration', [{
+    x:dur, type:'histogram', nbinsx:20, marker:{color:'#7c3aed',opacity:.8},
+    hovertemplate:'%{x}s<br>Count: %{y}<extra></extra>'
+  }], baseL({ margin:{t:10,b:44,l:44,r:12}, bargap:.05,
+    xaxis:{title:{text:'Duration (s)',font:{family:PF.family,size:10.5}}} }), CFG);
+}
+
+/* ── AGE ────────────────────────────────── */
+function buildAge(data) {
+  var ag = {'18–25':{t:0,s:0},'26–35':{t:0,s:0},'36–45':{t:0,s:0},'46–55':{t:0,s:0},'56–65':{t:0,s:0},'65+':{t:0,s:0}};
+  data.forEach(function(tx) {
+    var a = tx.CustomerAge;
+    var g = a<=25?'18–25':a<=35?'26–35':a<=45?'36–45':a<=55?'46–55':a<=65?'56–65':'65+';
+    ag[g].t++; if (tx._susp) ag[g].s++;
+  });
+  var grps = Object.keys(ag);
+  Plotly.newPlot('chart-age', [{
+    x:grps, y:grps.map(function(g){ return ag[g].t?(ag[g].s/ag[g].t*100).toFixed(1):0; }),
+    type:'scatter', mode:'lines+markers',
+    fill:'tozeroy', fillcolor:'rgba(8,145,178,0.09)',
+    line:{color:'#0891b2',width:2.5,shape:'spline'}, marker:{color:'#0891b2',size:7},
+    hovertemplate:'Age %{x}<br>%{y}% suspicion rate<extra></extra>'
+  }], baseL({ margin:{t:10,b:44,l:50,r:12}, yaxis:{gridcolor:GC,ticksuffix:'%',tickfont:PF} }), CFG);
+}
+
+/* ── FEED TABLE ─────────────────────────── */
+function buildFeed(data) {
+  var top25 = data.slice().sort(function(a,b){return b._score-a._score;}).slice(0,25);
+  var body  = document.getElementById('feed-body');
+  body.innerHTML = '';
+  top25.forEach(function(tx) {
+    var s  = tx._score;
+    var bc = s>=61?'#e11d48':s>=31?'#d97706':'#059669';
+    var cl = s>=61?'rh':s>=31?'rm':'rl';
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td class="mono">'+tx.TransactionID+'</td>' +
+      '<td class="mono">'+tx.AccountID+'</td>' +
+      '<td style="font-weight:700;color:'+(tx.TransactionAmount>1000?'var(--rose)':tx.TransactionAmount>500?'var(--amber)':'var(--text)')+'">$'+tx.TransactionAmount.toFixed(2)+'</td>' +
+      '<td>'+tx.Channel+'</td>' +
+      '<td>'+tx.Location+'</td>' +
+      '<td style="color:'+(tx.LoginAttempts>=3?'var(--rose)':'var(--text)')+'">'+tx.LoginAttempts+'</td>' +
+      '<td style="color:'+(tx.TransactionDuration<20?'var(--amber)':'var(--text)')+'">'+tx.TransactionDuration+'s</td>' +
+      '<td><div class="sbar"><div class="strack"><div class="sfill" style="width:'+s+'%;background:'+bc+'"></div></div>' +
+        '<span style="font-size:11.5px;font-weight:700;min-width:26px;color:'+bc+'">'+s+'</span></div></td>' +
+      '<td><span class="rpill '+cl+'"><span style="width:6px;height:6px;border-radius:50%;background:'+bc+';display:inline-block;flex-shrink:0"></span>'+tx._risk+'</span></td>';
+    body.appendChild(tr);
+  });
+}
+
+/* ── ANIMATE ────────────────────────────── */
+function animateCards() {
+  var cards = document.querySelectorAll('.kpi-card, .chart-card');
+  var io = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('vis'); io.unobserve(e.target); } });
+  }, { threshold:0.1 });
+  cards.forEach(function(c, i) {
+    if (!c.style.animationDelay) c.style.animationDelay = (i * 0.05) + 's';
+    io.observe(c);
+  });
+}
+
+/* ══════════════════════════════════════════
+   EXPORT FUNCTIONS
+══════════════════════════════════════════ */
+var _tTmr;
+function toast(msg, spin) {
+  document.getElementById('t-msg').textContent = msg;
+  document.getElementById('t-spin').style.display = (spin === false) ? 'none' : 'block';
+  document.getElementById('toast').classList.add('show');
+  clearTimeout(_tTmr);
+  if (spin === false) { _tTmr = setTimeout(function(){ document.getElementById('toast').classList.remove('show'); }, 2600); }
+}
+function toastDone(msg) {
+  document.getElementById('t-spin').style.display = 'none';
+  document.getElementById('t-msg').textContent = msg || '✅ Done!';
+  _tTmr = setTimeout(function(){ document.getElementById('toast').classList.remove('show'); }, 2600);
+}
+
+/* Single chart PNG */
+function dlChart(chartId, filename) {
+  toast('Exporting chart…');
+  var el = document.getElementById(chartId);
+  if (!el) { toastDone('⚠️ Chart not found'); return; }
+  Plotly.downloadImage(el, { format:'png', width:1200, height:600, filename:filename||chartId })
+    .then(function(){ toastDone('✅ Chart saved!'); })
+    .catch(function(){ toastDone('⚠️ Export failed'); });
+}
+
+/* All charts PNG */
+var CHART_IDS = [
+  ['chart-trend','aml_01_trend'],['chart-channel','aml_02_channel'],
+  ['chart-location','aml_03_location'],['chart-occupation','aml_04_occupation'],
+  ['chart-risk','aml_05_risk'],['chart-login','aml_06_login'],
+  ['chart-type','aml_07_type'],['chart-amount','aml_08_amount'],
+  ['chart-duration','aml_09_duration'],['chart-age','aml_10_age']
+];
+
+function exportAllPNG() {
+  if (!gData.length) { toast('Upload data first', false); return; }
+  var i = 0;
+  function next() {
+    if (i >= CHART_IDS.length) { toastDone('✅ All '+CHART_IDS.length+' charts saved!'); return; }
+    toast('Saving chart '+(i+1)+' of '+CHART_IDS.length+'…');
+    var id = CHART_IDS[i][0], name = CHART_IDS[i][1];
+    var el = document.getElementById(id);
+    i++;
+    if (!el) { setTimeout(next, 300); return; }
+    Plotly.downloadImage(el, { format:'png', width:1200, height:600, filename:name })
+      .then(function(){ setTimeout(next, 700); })
+      .catch(function(){ setTimeout(next, 700); });
+  }
+  next();
+}
+
+/* KPI CSV */
+function exportKPIcsv() {
+  if (!gData.length) { toast('Upload data first', false); return; }
+  var rows = ['KPI,Value,Note'];
+  document.querySelectorAll('.kpi-card').forEach(function(card) {
+    var lbl = (card.querySelector('.kpi-lbl')||{}).textContent||'';
+    var val = (card.querySelector('.kpi-val')||{}).textContent||'';
+    var sub = (card.querySelector('.kpi-sub')||{}).textContent||'';
+    rows.push('"'+lbl.trim()+'","'+val.trim()+'","'+sub.trim()+'"');
+  });
+  dlCSV(rows.join('\n'), 'aml_kpi_summary.csv');
+  toastDone('✅ KPIs exported!');
+}
+
+/* Alert feed CSV */
+function exportFeedCSV() {
+  if (!gData.length) { toast('Upload data first', false); return; }
+  var hdr = 'TransactionID,AccountID,Amount,Channel,Location,LoginAttempts,Duration_s,RiskScore,RiskLevel';
+  var rows = [hdr];
+  document.querySelectorAll('#feed-body tr').forEach(function(tr) {
+    var cells = [].map.call(tr.querySelectorAll('td'), function(td){ return '"'+td.textContent.trim().replace(/\s+/g,' ')+'"'; });
+    if (cells.length) rows.push(cells.join(','));
+  });
+  dlCSV(rows.join('\n'), 'aml_alert_feed.csv');
+  toastDone('✅ Alert feed exported!');
+}
+
+/* Raw enriched CSV */
+function exportRawCSV() {
+  if (!gData.length) { toast('Upload data first', false); return; }
+  toast('Building CSV…');
+  var hdr = ['TransactionID','AccountID','TransactionAmount','TransactionDate','TransactionType',
+    'Location','DeviceID','IP Address','MerchantID','Channel','CustomerAge','CustomerOccupation',
+    'TransactionDuration','LoginAttempts','AccountBalance','RiskScore','RiskLevel','Suspicious'];
+  var rows = [hdr.join(',')];
+  gData.forEach(function(tx) {
+    var vals = [tx.TransactionID,tx.AccountID,tx.TransactionAmount,tx.TransactionDate,tx.TransactionType,
+      tx.Location,tx.DeviceID,tx['IP Address'],tx.MerchantID,tx.Channel,tx.CustomerAge,
+      tx.CustomerOccupation,tx.TransactionDuration,tx.LoginAttempts,tx.AccountBalance,
+      tx._score,tx._risk,tx._susp?'Yes':'No'];
+    rows.push(vals.map(function(v){ return '"'+(v==null?'':String(v).replace(/"/g,'""'))+'"'; }).join(','));
+  });
+  dlCSV(rows.join('\n'), 'aml_enriched_data.csv');
+  toastDone('✅ Raw data ('+(gData.length)+' rows) exported!');
+}
+
+/* Full PDF via print */
+function exportPDF() {
+  toast('Opening print dialog…');
+  setTimeout(function(){ window.print(); toastDone('✅ Choose "Save as PDF" in the dialog'); }, 400);
+}
+
+/* CSV blob download helper */
+function dlCSV(str, fname) {
+  var blob = new Blob([str], { type:'text/csv;charset=utf-8;' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
